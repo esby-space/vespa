@@ -3,8 +3,8 @@ import { relative, resolve } from "path";
 import { Plugin } from "vite";
 
 const TEMPLATE_PATH = "./src/client/template.html";
+const TEMP_PATH = "./temp/";
 const PAGES_PATH = "./src/client/pages/";
-const TEMP_PATH = "./src/";
 const DIST_PATH = "./dist/client/";
 
 const vespa = (): Plugin => ({
@@ -21,39 +21,43 @@ const vespa = (): Plugin => ({
             if (!requested) return next();
 
             const path = `${resolve(PAGES_PATH, requested)}.tsx`;
-            console.log(path);
             response.writeHead(200, { "Content-type": "text/html" });
             response.end(template.replace("<!--vespa-src-->", path));
         });
     },
 
-    // for build, configure rollup to accept inputs
     async config(_, { command }) {
         if (command != "build") return;
 
+        // generate rollup config to accept inputs
+        const pages = await readdir(resolve(PAGES_PATH));
         const input: { [key: string]: string } = {};
-        const paths = (await readdir(resolve(PAGES_PATH))).map((file) => resolve(TEMP_PATH, file.replace(".tsx", ".html")));
-        (await readdir(resolve(PAGES_PATH))).map((file) => file.replace(/\..+/, "")).forEach((file, i) => input[file] = paths[i]);
+        const paths = pages.map((file) => resolve(TEMP_PATH, file.replace(/\..+/, ".html")));
+        pages.map((file) => file.replace(/\..+/, "")).forEach((file, i) => (input[file] = paths[i]));
 
-        return { build: { rollupOptions: { input } } }
-    },
-
-    // generate temp files after build is done, before output generation starts
-    async buildEnd() {
-        await rm(resolve(TEMP_PATH), { recursive: true, force: true }).catch(() => console.log("not there"));
+        // make temp directory
         await mkdir(resolve(TEMP_PATH));
 
+        // generate html files from template
         const template = await readFile(resolve(TEMPLATE_PATH), "utf-8");
-        (await readdir(resolve(PAGES_PATH))).forEach(async (file) => await writeFile(resolve(TEMP_PATH, file.replace(".tsx", ".html")), template.replace("<!--vespa-src-->", `${relative(TEMP_PATH, PAGES_PATH)}/${file}`)));
+        pages.forEach(
+            async (file) =>
+                await writeFile(
+                    resolve(TEMP_PATH, file.replace(/\..+/, ".html")),
+                    template.replace("<!--vespa-src-->", `${relative(TEMP_PATH, PAGES_PATH)}/${file}`)
+                )
+        );
+
+        return { build: { rollupOptions: { input } } };
     },
 
-    // cleanup temp file, move result files to final place
+    // cleanup temp files
     async closeBundle() {
         const files = await readdir(resolve(DIST_PATH, TEMP_PATH));
         files.forEach(async (file) => await rename(resolve(DIST_PATH, TEMP_PATH, file), resolve(DIST_PATH, file)));
         await rm(resolve(DIST_PATH, TEMP_PATH), { recursive: true, force: true });
-    }
+        await rm(resolve(TEMP_PATH), { recursive: true, force: true });
+    },
 });
 
 export default vespa;
-
