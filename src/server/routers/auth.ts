@@ -1,11 +1,11 @@
 import trpc from "../lib/trpc.js";
-import auth from "../lib/auth.js";
+import auth from "../lib/lucia.js";
 import z from "zod";
 
 export default trpc.router({
     auth: trpc.procedure.query(async ({ ctx }) => {
         const authRequest = auth.handleRequest(ctx.request, ctx.response);
-        return await authRequest.validateUser();
+        return (await authRequest.validateUser()).user;
     }),
 
     login: trpc.procedure.input(z.object({
@@ -24,7 +24,7 @@ export default trpc.router({
     })).query(async ({input, ctx}) => {
         const authRequest = auth.handleRequest(ctx.request, ctx.response);
         const user = await auth.createUser({
-            attributes: { userId: input.username },
+            attributes: { username: input.username },
             primaryKey: {
                 providerId: "username",
                 providerUserId: input.username,
