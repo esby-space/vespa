@@ -17,10 +17,7 @@ const serveDev = async (app: Express, server: Server) => {
     server.on("close", dev.close);
 };
 
-const serveProd = (app: Express) => {
-    console.log(resolve("../../client/"));
-    app.use(express.static(resolve("../../client/")));
-};
+const serveProd = (app: Express) => { app.use(express.static(resolve("../../client/"))) };
 
 export default serve;
 

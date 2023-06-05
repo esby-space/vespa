@@ -14,11 +14,12 @@
     "dependencies": {
         "@lucia-auth/adapter-prisma": "^2.0.0",
         "@prisma/client": "^4.13.0",
+        "@solidjs/router": "^0.8.2",
         "@trpc/client": "^10.19.1",
         "@trpc/server": "^10.19.1",
         "express": "^4.18.2",
         "lucia-auth": "^1.3.0",
-        "solid-js": "^1.7.4",
+        "solid-js": "^1.7.6",
         "zod": "^3.21.4"
     },
     "devDependencies": {
